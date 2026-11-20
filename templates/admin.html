@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin Dashboard · DBChatPro 2.0</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="admin-page">
+
+  <!-- ===== TOPBAR ===== -->
+  <header class="topbar">
+    <span class="brand">DBChatPro <b>2.0</b></span>
+    <span class="tagline">Admin Dashboard</span>
+    <span class="spacer"></span>
+    <a class="topbar-link" href="{{ url_for('index') }}" style="margin-right:6px;">← Back to App</a>
+    <span class="user-pill" style="margin-right:10px;">👤 {{ current_user.username }}
+      <span class="role-badge">{{ current_user.role }}</span>
+    </span>
+    <a class="topbar-link" href="{{ url_for('logout') }}">Sign Out</a>
+  </header>
+
+  <!-- ===== BODY ===== -->
+  <div class="admin-body">
+
+    <h1 class="admin-title">User Management</h1>
+    <p class="admin-sub">Manage registered users and review system activity.</p>
+
+    <!-- stat cards -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-val">{{ total_users }}</div>
+        <div class="stat-label">Total Users</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">{{ active_users }}</div>
+        <div class="stat-label">Active Users</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">{{ admin_count }}</div>
+        <div class="stat-label">Admins</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">{{ recent_count }}</div>
+        <div class="stat-label">Activity Entries</div>
+      </div>
+    </div>
+
+    <!-- user table -->
+    <div class="admin-section">
+      <h2>Registered Users</h2>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Created At</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.id }}</td>
+            <td>{{ u.username }}</td>
+            <td class="{% if u.role == 'admin' %}role-admin{% else %}role-user{% endif %}">
+              {{ u.role }}
+            </td>
+            <td>
+              {% if u.is_active %}
+                <span class="status-active">● Active</span>
+              {% else %}
+                <span class="status-inactive">● Inactive</span>
+              {% endif %}
+            </td>
+            <td>{{ u.created_at }}</td>
+            <td>
+              {% if u.role != 'admin' %}
+                <!-- toggle status -->
+                <form method="post" action="{{ url_for('admin_toggle_user') }}" style="display:inline">
+                  <input type="hidden" name="user_id" value="{{ u.id }}">
+                  <input type="hidden" name="is_active" value="{{ '0' if u.is_active else '1' }}">
+                  <button class="btn-sm warn" type="submit">
+                    {{ 'Deactivate' if u.is_active else 'Activate' }}
+                  </button>
+                </form>
+                <!-- delete -->
+                <form method="post" action="{{ url_for('admin_delete_user') }}" style="display:inline"
+                      onsubmit="return confirm('Delete user {{ u.username }}? This cannot be undone.')">
+                  <input type="hidden" name="user_id" value="{{ u.id }}">
+                  <button class="btn-sm danger" type="submit">Delete</button>
+                </form>
+              {% else %}
+                <span style="color:var(--muted);font-size:.78rem;">Protected</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- activity log -->
+    <div class="admin-section">
+      <h2>Activity Log <span style="color:var(--muted);font-size:.82rem;font-weight:400;">(last 100)</span></h2>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Detail</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in activity %}
+          <tr>
+            <td class="log-entry">{{ entry.timestamp }}</td>
+            <td class="log-entry">{{ entry.username }}</td>
+            <td class="log-entry">{{ entry.action }}</td>
+            <td class="log-entry">{{ entry.detail }}</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="4" style="color:var(--muted);text-align:center;padding:20px;">No activity recorded yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /admin-body -->
+</div><!-- /admin-page -->
+</body>
+</html>

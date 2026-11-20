@@ -1,0 +1,13 @@
+flask>=3.0
+numpy>=2.0
+scikit-learn>=1.5
+flask-login>=0.6
+werkzeug>=3.0
+
+# --- optional: offline voice input (the dashboard works without them) ---
+sounddevice>=0.5           # microphone recording (Linux also needs the PortAudio library)
+faster-whisper>=1.0        # local Whisper speech-to-text; the model downloads itself on first use
+
+# --- optional fallback speech engine, used only if Whisper is unavailable ---
+# SpeechRecognition>=3.17
+# vosk>=0.3.45             # then run once:  sprc download vosk

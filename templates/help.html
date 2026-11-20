@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Help &amp; examples · DBChatPro</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{# one example row: what you type  ->  the SQL it becomes #}
+{% macro ex(say, sql) %}
+  <div class="ex"><code class="say">{{ say }}</code><code class="becomes">{{ sql }}</code></div>
+{% endmacro %}
+
+  <header class="topbar">
+    <span class="brand">DBChatPro <b>2.0</b></span>
+    <span class="tagline">Help &amp; examples</span>
+    <span class="spacer"></span>
+    <a class="topbar-link" href="{{ url_for('index') }}">← Back to app</a>
+  </header>
+
+  <main class="help-page">
+    <div class="help-inner">
+      <h1>How to give commands</h1>
+      <p class="sub">Type a normal English sentence in the prompt box. Use your <b>table</b> and <b>column</b> names, and the app writes the SQL, checks it, and runs it. Examples below use the demo tables; replace the names with yours.</p>
+
+      <nav class="help-nav">
+        <a href="#yourdb">Your database</a><a href="#show">Show data</a><a href="#filter">Filters</a>
+        <a href="#count">Count &amp; group</a><a href="#sort">Sort &amp; top N</a><a href="#join">Joins</a>
+        <a href="#insert">Insert</a><a href="#update">Update</a><a href="#delete">Delete</a>
+        <a href="#table">Tables</a><a href="#describe">Describe</a><a href="#tips">Tips</a>
+      </nav>
+
+      <section id="yourdb" class="help-sec">
+        <h2>Your database right now</h2>
+        {% if schema %}
+          <p>Connected to <code>{{ connection }}</code>. You can refer to these tables and columns:</p>
+          <ul class="help-tables">
+          {% for t in schema %}
+            <li><b>{{ t.table_name }}</b> — {% for c in t.columns %}{{ c.name }} <span class="coltype">{{ c.decl_type or 'ANY' }}</span>{{ ', ' if not loop.last }}{% endfor %}</li>
+          {% endfor %}
+          </ul>
+        {% else %}
+          <p>The database has no tables yet. Try: <code>create table pets with columns name text, age integer</code></p>
+        {% endif %}
+      </section>
+
+      <section id="show" class="help-sec">
+        <h2>Show data</h2>
+        <div class="ex-head"><span>You type</span><span>It becomes</span></div>
+        {{ ex('show all employees', 'SELECT * FROM "employees";') }}
+        {{ ex('show name and salary of employees', 'SELECT "name", "salary" FROM "employees";') }}
+        {{ ex('unique departments', 'SELECT DISTINCT "department" FROM "employees";') }}
+      </section>
+
+      <section id="filter" class="help-sec">
+        <h2>Filters (conditions)</h2>
+        <div class="ex-head"><span>You type</span><span>It becomes</span></div>
+        {{ ex('employees older than 30', 'SELECT * FROM "employees" WHERE "age" > 30;') }}
+        {{ ex('employees in london', "SELECT * FROM \"employees\" WHERE \"city\" = 'London';") }}
+        {{ ex('employees between 30 and 40 years old', 'SELECT * FROM "employees" WHERE "age" BETWEEN 30 AND 40;') }}
+        {{ ex('employees not in london', "… WHERE \"city\" != 'London';") }}
+        {{ ex('employees in london or paris', "… WHERE \"city\" IN ('London', 'Paris');") }}
+        {{ ex('employees with salary at least 90000', '… WHERE "salary" >= 90000;') }}
+        {{ ex('employees whose name starts with A', "… WHERE \"name\" LIKE 'A%';") }}
+        <p class="help-note">Words for comparing: <i>older / more than / above / over</i> (&gt;), <i>younger / less than / below / under</i> (&lt;), <i>at least</i> (&gt;=), <i>at most</i> (&lt;=), <i>between … and …</i>, <i>not</i>. Text with spaces goes in quotes: <code>city is 'New York'</code>.</p>
+      </section>
+
+      <section id="count" class="help-sec">
+        <h2>Count, totals and groups</h2>
+        <div class="ex-head"><span>You type</span><span>It becomes</span></div>
+        {{ ex('how many employees in engineering', "SELECT COUNT(*) FROM \"employees\" WHERE \"department\" = 'Engineering';") }}
+        {{ ex('average salary per department', 'SELECT "department", AVG("salary") FROM "employees" GROUP BY "department";') }}
+        {{ ex('maximum salary per department', 'SELECT "department", MAX("salary") … GROUP BY "department";') }}
+        {{ ex('count employees per department having more than 3', '… GROUP BY "department" HAVING COUNT(*) > 3;') }}
+        <p class="help-note">Words for totals: <i>count / how many</i>, <i>sum / total</i>, <i>average</i>, <i>maximum</i>, <i>minimum</i>. Use <i>per</i> or <i>by</i> before the column to group.</p>
+      </section>
+
+      <section id="sort" class="help-sec">
+        <h2>Sort and top N</h2>
+        <div class="ex-head"><span>You type</span><span>It becomes</span></div>
+        {{ ex('top 3 highest paid employees', 'SELECT * FROM "employees" ORDER BY "salary" DESC LIMIT 3;') }}
+        {{ ex('show 3 cheapest products', '… FROM "products" ORDER BY "price" ASC LIMIT 3;') }}
+        {{ ex('employees sorted by age descending', '… ORDER BY "age" DESC;') }}
+        {{ ex('first 5 employees', '… FROM "employees" LIMIT 5;') }}
+      </section>
+
+      <section id="join" class="help-sec">
+        <h2>Several tables (joins)</h2>
+        <div class="ex-head"><span>You type</span><span>It becomes</span></div>
+        {{ ex('show orders and products', 'SELECT * FROM "orders" INNER JOIN "products" ON … ;') }}
+        <p class="help-note">Name both tables. The join uses foreign keys or matching column names; check the SQL card to be sure the link is the one you meant.</p>
+      </section>
+
+      <section id="insert" class="help-sec">
+        <h2>Insert a row</h2>
+        <p>Pattern: <code>insert into &lt;table&gt; &lt;column&gt; &lt;value&gt; &lt;column&gt; &lt;value&gt; …</code> — give each column name followed by its value. Columns you leave out stay empty.</p>
+        <div class="ex-head"><span>You type</span><span>It becomes</span></div>
+        {{ ex('insert into employees name Rex age 30 city Paris', "INSERT INTO \"employees\" (\"name\", \"age\", \"city\") VALUES ('Rex', 30, 'Paris');") }}
+        {{ ex('add employee name Zoe salary 70000 age 28', "INSERT INTO \"employees\" (\"name\", \"salary\", \"age\") VALUES ('Zoe', 70000, 28);") }}
+      </section>
+
+      <section id="update" class="help-sec">
+        <h2>Change rows</h2>
+        <div class="ex-head"><span>You type</span><span>It becomes</span></div>
+        {{ ex('update employees set salary = 75000 where name is Bob', "UPDATE \"employees\" SET \"salary\" = 75000 WHERE \"name\" = 'Bob';") }}
+        {{ ex('increase salary by 5000 for employees in sales', "UPDATE \"employees\" SET \"salary\" = \"salary\" + 5000 WHERE \"department\" = 'Sales';") }}
+        <p class="help-warn">Without a condition, an update changes every row. Always say which rows (<i>where …</i> or <i>for …</i>).</p>
+      </section>
+
+      <section id="delete" class="help-sec">
+        <h2>Delete rows</h2>
+        <div class="ex-head"><span>You type</span><span>It becomes</span></div>
+        {{ ex('delete employees older than 50', 'DELETE FROM "employees" WHERE "age" > 50;') }}
+        <p class="help-warn">A delete without a condition is blocked, so you can't wipe a table by accident. Deleted rows can't be undone; back up the .db file first if the data matters.</p>
+      </section>
+
+      <section id="table" class="help-sec">
+        <h2>Create, change and drop tables</h2>
+        <div class="ex-head"><span>You type</span><span>It becomes</span></div>
+        {{ ex('create table pets with columns name text, age integer, weight real', 'CREATE TABLE "pets" ("name" TEXT, "age" INTEGER, "weight" REAL);') }}
+        {{ ex('alter table pets add column owner text', 'ALTER TABLE "pets" ADD COLUMN "owner" TEXT;') }}
+        {{ ex('alter table pets rename column owner to keeper', 'ALTER TABLE "pets" RENAME COLUMN "owner" TO "keeper";') }}
+        {{ ex('rename table pets to animals', 'ALTER TABLE "pets" RENAME TO "animals";') }}
+        {{ ex('drop table animals', 'DROP TABLE "animals";  (asks you to confirm)') }}
+        <p class="help-note"><b>Data types:</b> write the type after the column name (<i>text, integer, real</i>). If you leave it out, the app guesses from the name (age → integer, price → real) and otherwise uses <code>TEXT</code>. A <code>TEXT</code> column sorts numbers wrongly (9 after 10), so name numeric columns' types.</p>
+        <p class="help-warn">Dropping a table or column asks you to type the name to confirm, and cannot be undone.</p>
+      </section>
+
+      <section id="describe" class="help-sec">
+        <h2>Describe a table (show its structure)</h2>
+        <div class="ex-head"><span>You type</span><span>It shows</span></div>
+        {{ ex('describe employees', 'one row per column: column, type, not_null, primary_key') }}
+        {{ ex('what columns does products have', 'same list for the products table') }}
+        <p class="help-note">Also works: <i>structure of orders</i>, <i>schema of employees</i>, <i>show columns of products</i>.</p>
+      </section>
+
+      <section id="tips" class="help-sec">
+        <h2>Tips and limits</h2>
+        <ul class="help-list">
+          <li>Check the <b>Generated SQL</b> card and the <b>Insights</b> tab to see why each part was chosen.</li>
+          <li>If it says it can't tell which column you mean, name the column in your sentence.</li>
+          <li>One request per sentence. Not supported yet: subqueries, comparing two columns, date phrases like "last month".</li>
+          <li>The <b>SQL</b> tab accepts SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER and DROP only (for the structure of a table use <i>describe</i> above).</li>
+          <li>Voice: press the microphone button and speak the same sentences within 5 seconds (offline Whisper; the first use downloads the model once). Numbers can be spoken ("ninety thousand"). If it mis-hears you, the error shows what it heard.</li>
+          <li>History and favorites are saved in <code>history.json</code>, so they are still there next time. Use the <b>✕</b> on a card to delete one entry, or <b>Clear history</b> / <b>Clear favorites</b> to remove them all.</li>
+        </ul>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

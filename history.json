@@ -1,0 +1,189 @@
+{
+  "queries": [
+    {
+      "id": 99,
+      "query": "display the grid available copies,",
+      "name": "display the grid available copies,",
+      "connection_name": "library_management.db",
+      "created": "2026-11-06T13:08:19",
+      "kind": "SELECT"
+    },
+    {
+      "id": 100,
+      "query": "display book with available copies.",
+      "name": "display book with available copies.",
+      "connection_name": "library_management.db",
+      "created": "2026-11-06T13:08:36",
+      "kind": "SELECT"
+    },
+    {
+      "id": 101,
+      "query": "please play authors name.",
+      "name": "please play authors name.",
+      "connection_name": "library_management.db",
+      "created": "2026-11-06T13:08:51",
+      "kind": "SELECT"
+    },
+    {
+      "id": 102,
+      "query": "display loan, issue date,",
+      "name": "display loan, issue date,",
+      "connection_name": "library_management.db",
+      "created": "2026-11-06T13:09:29",
+      "kind": "SELECT"
+    },
+    {
+      "id": 103,
+      "query": "display categories",
+      "name": "display categories",
+      "connection_name": "project_demo_store.db",
+      "created": "2026-11-06T13:09:55",
+      "kind": "SELECT"
+    },
+    {
+      "id": 104,
+      "query": "easily inventories.",
+      "name": "easily inventories.",
+      "connection_name": "project_demo_store.db",
+      "created": "2026-11-06T13:10:54",
+      "kind": "SELECT"
+    },
+    {
+      "id": 105,
+      "query": "choose supplier's name with email id.",
+      "name": "choose supplier's name with email id.",
+      "connection_name": "project_demo_store.db",
+      "created": "2026-11-06T13:11:31",
+      "kind": "SELECT"
+    },
+    {
+      "id": 112,
+      "query": "show categories",
+      "name": "show categories",
+      "connection_name": "project_demo_store.db",
+      "created": "2026-11-06T13:59:49",
+      "kind": "SELECT"
+    },
+    {
+      "id": 113,
+      "query": "show, customer id with the name.",
+      "name": "show, customer id with the name.",
+      "connection_name": "project_demo_store.db",
+      "created": "2026-11-06T14:00:06",
+      "kind": "SELECT"
+    },
+    {
+      "id": 114,
+      "query": "display author name with the country.",
+      "name": "display author name with the country.",
+      "connection_name": "library_management.db",
+      "created": "2026-11-06T14:17:33",
+      "kind": "SELECT"
+    },
+    {
+      "id": 115,
+      "query": "display author name, country is CSA.",
+      "name": "display author name, country is CSA.",
+      "connection_name": "library_management.db",
+      "created": "2026-11-06T14:18:11",
+      "kind": "SELECT"
+    },
+    {
+      "id": 116,
+      "query": "display book with author id.",
+      "name": "display book with author id.",
+      "connection_name": "library_management.db",
+      "created": "2026-11-06T14:18:38",
+      "kind": "SELECT"
+    },
+    {
+      "id": 117,
+      "query": "display, books, book, author id.",
+      "name": "display, books, book, author id.",
+      "connection_name": "library_management.db",
+      "created": "2026-11-06T14:18:56",
+      "kind": "SELECT"
+    },
+    {
+      "id": 118,
+      "query": "describe, fines",
+      "name": "describe, fines",
+      "connection_name": "library_management.db",
+      "created": "2026-11-06T14:19:15",
+      "kind": "SELECT"
+    },
+    {
+      "id": 131,
+      "query": "create new table teachers with ID teacher name and course",
+      "name": "create new table teachers with ID teacher name and course",
+      "connection_name": "project_demo_store.db",
+      "created": "2026-11-11T22:00:13",
+      "kind": "CREATE"
+    },
+    {
+      "id": 132,
+      "query": "drop column teacher from teacher table",
+      "name": "drop column teacher from teacher table",
+      "connection_name": "project_demo_store.db",
+      "created": "2026-11-11T22:00:47",
+      "kind": "ALTER"
+    },
+    {
+      "id": 133,
+      "query": "teacher name",
+      "name": "teacher name",
+      "connection_name": "project_demo_store.db",
+      "created": "2026-11-11T22:11:22",
+      "kind": "SELECT"
+    },
+    {
+      "id": 134,
+      "query": "teacher name",
+      "name": "teacher name",
+      "connection_name": "project_demo_store.db",
+      "created": "2026-11-11T22:11:25",
+      "kind": "SELECT"
+    },
+    {
+      "id": 153,
+      "query": "show employees",
+      "name": "show employees",
+      "connection_name": "target_database.db",
+      "created": "2026-11-16T14:21:47",
+      "kind": "SELECT"
+    },
+    {
+      "id": 154,
+      "query": "orders",
+      "name": "orders",
+      "connection_name": "target_database.db",
+      "created": "2026-11-16T14:26:57",
+      "kind": "SELECT"
+    },
+    {
+      "id": 155,
+      "query": "show orders",
+      "name": "show orders",
+      "connection_name": "target_database.db",
+      "created": "2026-11-16T14:27:08",
+      "kind": "SELECT"
+    },
+    {
+      "id": 156,
+      "query": "show order ID is 3",
+      "name": "show order ID is 3",
+      "connection_name": "target_database.db",
+      "created": "2026-11-16T14:27:31",
+      "kind": "SELECT"
+    },
+    {
+      "id": 157,
+      "query": "show order ID 3 from orders table",
+      "name": "show order ID 3 from orders table",
+      "connection_name": "target_database.db",
+      "created": "2026-11-16T14:28:03",
+      "kind": "SELECT"
+    }
+  ],
+  "favorites": []
+}

@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DBChatPro 2.0 · Python</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+  {# Pure-CSS sidebar collapse: this hidden checkbox is toggled by the burger <label> #}
+  <input type="checkbox" id="nav-toggle" class="hidden-input">
+
+  <header class="topbar">
+    <label for="nav-toggle" class="burger" title="Toggle sidebar">☰</label>
+    <span class="brand">DBChatPro <b>2.0</b></span>
+    <span class="tagline">Chat with your database </span>
+    <span class="spacer"></span>
+    <a class="topbar-link" href="{{ url_for('help_page') }}">❓ Help &amp; examples</a>
+    <span class="user-pill">👤 {{ current_user.username }} <span class="role-badge">{{ current_user.role }}</span></span>
+    {% if current_user.role == 'admin' %}<a class="topbar-link" href="{{ url_for('admin_dashboard') }}" style="margin-right:4px;">⚙ Admin</a>{% endif %}
+    <a class="topbar-link" href="{{ url_for('logout') }}">Sign Out</a>
+  </header>
+
+  <div class="shell">
+
+    {# ============================ LEFT SIDEBAR ============================ #}
+    <aside class="sidebar">
+      <div class="status-pill">🟢 SQLite Connected</div>
+      <div class="db-meta" title="{{ active_path }}">{{ connection }} · {{ schema|length }} table{{ '' if schema|length == 1 else 's' }}</div>
+
+      {% if connections|length > 1 %}
+      <form method="post" action="{{ url_for('switch_db') }}" class="db-quick-switch">
+        <label for="db-select" class="quick-label">Active DB:</label>
+        <select id="db-select" name="name" onchange="this.form.submit()" class="db-select">
+          {% for c in connections %}
+            <option value="{{ c.name }}" {% if c.name == connection %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      {% endif %}
+
+      <div class="sb-tabs">
+        <input type="radio" name="sbtab" id="sb-history" class="hidden-input" checked>
+        <label for="sb-history">History <span class="count">{{ history|length }}</span></label>
+        <input type="radio" name="sbtab" id="sb-fav" class="hidden-input">
+        <label for="sb-fav">Favorites <span class="count">{{ favorites|length }}</span></label>
+        <input type="radio" name="sbtab" id="sb-schema" class="hidden-input">
+        <label for="sb-schema">Schema</label>
+        <input type="radio" name="sbtab" id="sb-connect" class="hidden-input">
+        <label for="sb-connect">Connect</label>
+
+        {# ---- running transaction log ---- #}
+        <div class="sb-panel" id="sbp-history">
+          {% if history %}
+            <div class="sb-note">Click a card to run it again.</div>
+            <div class="log-list">
+              {% for item in history %}
+              <div class="log-row">
+                <form method="post" action="{{ url_for('query') }}">
+                  <input type="hidden" name="action" value="run">
+                  <input type="hidden" name="prompt" value="{{ item.query }}">
+                  <button class="log-card" type="submit">
+                    <span class="log-text">{{ item.name }}</span>
+                    <span class="log-meta">
+                      {% if item.kind %}<span class="badge badge-{{ item.kind|lower }}">{{ item.kind }}</span>{% endif %}
+                      <span>{{ item.timestamp }}</span>
+                    </span>
+                  </button>
+                </form>
+                <form method="post" action="{{ url_for('delete_history_item') }}">
+                  <input type="hidden" name="id" value="{{ item.id }}">
+                  <button class="log-del" type="submit" title="Delete this entry" aria-label="Delete this history entry">✕</button>
+                </form>
+              </div>
+              {% endfor %}
+            </div>
+            <form method="post" action="{{ url_for('clear_history') }}" class="sb-foot">
+              <button class="link-btn" type="submit">Clear history</button>
+            </form>
+          {% else %}
+            <p class="empty">You haven't run any prompts yet.</p>
+          {% endif %}
+        </div>
+
+        {# ---- saved prompts ---- #}
+        <div class="sb-panel" id="sbp-fav">
+          {% if favorites %}
+            <div class="sb-note">Your saved queries.</div>
+            <div class="log-list">
+              {% for item in favorites %}
+              <div class="log-row">
+                <form method="post" action="{{ url_for('query') }}">
+                  <input type="hidden" name="action" value="run">
+                  <input type="hidden" name="prompt" value="{{ item.query }}">
+                  <button class="log-card fav" type="submit">
+                    <span class="log-text">★ {{ item.name }}</span>
+                    <span class="log-meta"><span>{{ item.timestamp }}</span></span>
+                  </button>
+                </form>
+                <form method="post" action="{{ url_for('delete_favorite_item') }}">
+                  <input type="hidden" name="id" value="{{ item.id }}">
+                  <button class="log-del" type="submit" title="Remove this favorite" aria-label="Remove this favorite">✕</button>
+                </form>
+              </div>
+              {% endfor %}
+            </div>
+            <form method="post" action="{{ url_for('clear_favorites') }}" class="sb-foot">
+              <button class="link-btn" type="submit">Clear favorites</button>
+            </form>
+          {% else %}
+            <p class="empty">No favorites yet. Use “★ Favorite” under the prompt box.</p>
+          {% endif %}
+        </div>
+
+        {# ---- schema tree (tables → columns) ---- #}
+        <div class="sb-panel" id="sbp-schema">
+          {% if schema %}
+            <div class="sb-note">Tables and columns of <b>{{ connection }}</b></div>
+            {% for t in schema %}
+              <details class="tree" {% if loop.first %}open{% endif %}>
+                <summary>🗂 {{ t.table_name }} <span class="count">{{ t.columns|length }}</span></summary>
+                <ul>
+                  {% for c in t.columns %}
+                    <li>{{ c.name }} <span class="coltype">{{ c.decl_type or 'ANY' }}</span></li>
+                  {% endfor %}
+                </ul>
+              </details>
+            {% endfor %}
+          {% else %}
+            <p class="empty">The database has no tables yet.<br>Try: <i>create table pets with columns name, age, weight</i></p>
+          {% endif %}
+        </div>
+
+        {# ---- manual database connection manager (like ConnectDb.razor) ---- #}
+        <div class="sb-panel" id="sbp-connect">
+          <div class="sb-note">Connect any SQLite database file (.db, .sqlite).</div>
+
+          <form method="post" action="{{ url_for('connect_db') }}" class="connect-form">
+            <div class="form-group">
+              <label class="form-label" for="conn-name">Connection Name</label>
+              <input type="text" id="conn-name" name="name" class="form-input" placeholder="e.g. Chinook or Sales DB" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="conn-path">SQLite File Path</label>
+              <input type="text" id="conn-path" name="path" class="form-input" placeholder="e.g. C:\Users\sanjana\my_data.db" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%; margin-top:6px;">Connect &amp; Load Schema</button>
+          </form>
+
+          <div class="active-db-card">
+            <div class="active-db-title">Active Database File</div>
+            <div class="active-db-path" title="{{ active_path }}">{{ active_path }}</div>
+            <div class="active-db-hint">Open this file in <b>DB Browser for SQLite</b> to view live table updates simultaneously.</div>
+          </div>
+
+          {% if connections %}
+          <div class="conn-list-title">Saved Connections</div>
+          <div class="conn-list">
+            {% for c in connections %}
+            <div class="conn-item {% if c.name == connection %}active{% endif %}">
+              <div class="conn-info">
+                <span class="conn-name">{% if c.name == connection %}🟢 {% endif %}{{ c.name }}</span>
+                <span class="conn-path" title="{{ c.path }}">{{ c.path }}</span>
+              </div>
+              <div class="conn-actions">
+                {% if c.name != connection %}
+                <form method="post" action="{{ url_for('switch_db') }}" style="display:inline;">
+                  <input type="hidden" name="name" value="{{ c.name }}">
+                  <button type="submit" class="link-btn" title="Switch to this database">Switch</button>
+                </form>
+                {% endif %}
+                {% if connections|length > 1 %}
+                <form method="post" action="{{ url_for('delete_db') }}" style="display:inline;">
+                  <input type="hidden" name="name" value="{{ c.name }}">
+                  <button type="submit" class="link-btn delete" title="Delete connection" onclick="return confirm('Remove this connection?')">✕</button>
+                </form>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </aside>
+
+    {# ============================ MAIN WORKSPACE ============================ #}
+    <main class="workspace">
+      <h1>Chat with your database</h1>
+      <p class="sub">Ask in plain English. <code>{{ connection }}</code>.</p>
+
+      {# ---- natural language input ---- #}
+      <form method="post" action="{{ url_for('query') }}" class="prompt-form" id="prompt-form">
+        <label for="prompt" class="field-label">Your prompt</label>
+        <textarea id="prompt" name="prompt" rows="4" placeholder="e.g. average salary per department above 70000" spellcheck="true">{{ s.prompt }}</textarea>
+        <div class="actions">
+          <button class="btn primary" type="submit" name="action" value="run">▶ Submit</button>
+          <button class="btn ghost" type="submit" name="action" value="favorite">★ Favorite</button>
+          <span class="spacer"></span>
+          <button class="btn voice" type="submit" name="action" value="voice" id="btn-voice" title="Click to speak using your microphone">🎙 Speak (5 s)</button>
+        </div>
+      </form>
+
+      {% if s.prompt_display %}
+      <div class="user-input-card">
+        <span class="user-input-label">User input:</span>
+        <span class="user-input-text">{{ s.prompt_display|safe }}</span>
+        {% if s.typos %}
+        <span class="typo-badge">⚠️ Spelling mistake: {{ s.typos|join(', ') }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if not s.sql and not s.exception and not s.message and schema %}
+        <div class="starters">
+          <span>Try:</span>
+          {% for t in schema[:3] %}
+            {% for phrase in ['show all ' ~ t.table_name, 'how many ' ~ t.table_name] %}
+            <form method="post" action="{{ url_for('query') }}">
+              <input type="hidden" name="action" value="run">
+              <input type="hidden" name="prompt" value="{{ phrase }}">
+              <button class="chip" type="submit">{{ phrase }}</button>
+            </form>
+            {% endfor %}
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {# ---- exception cards (validation / translation → amber, database → orange) ---- #}
+      {% if s.exception %}
+        <section class="card exc exc-{{ s.exception.kind }}">
+          <header>{{ '⛔' if s.exception.kind in ('validation', 'translation') else '🗄️' }} {{ s.exception.title }}</header>
+          <p class="exc-msg">{{ s.exception.message }}</p>
+          {% if s.exception.hint %}<p class="exc-hint">{{ s.exception.hint }}</p>{% endif %}
+        </section>
+      {% endif %}
+
+      {# ---- raw generated SQL (emerald) ---- #}
+      {% if s.sql %}
+        <section class="card sql-card">
+          <header>Generated SQL
+            {% if s.kind %}<span class="badge badge-{{ s.kind|lower }}">{{ s.kind }}</span>{% endif %}
+            {% if s.pending %}<span class="blocked">waiting for confirmation</span>{% endif %}
+            {% if s.exception %}<span class="blocked">{{ 'blocked before execution' if s.exception.kind in ('validation', 'translation') else 'failed · rolled back' }}</span>{% endif %}
+          </header>
+          <pre><code>{{ s.sql }}</code></pre>
+          {% if s.notes %}
+            <ul class="notes">
+              {% for n in s.notes %}<li>🛡 {{ n }}</li>{% endfor %}
+            </ul>
+          {% endif %}
+        </section>
+      {% endif %}
+
+      {# ---- irreversible statement waiting for confirmation ---- #}
+      {% if s.pending %}
+        <section class="card confirm-card">
+          <header>⚠️ Confirm destructive action</header>
+          <p>{{ s.pending.detail }}</p>
+          <form method="post" action="{{ url_for('confirm') }}" class="confirm-form">
+            <label for="confirm" class="field-label">Type <code>{{ s.pending.target }}</code> to confirm</label>
+            <div class="actions tight">
+              <input id="confirm" name="confirm" class="text-input" autocomplete="off" placeholder="{{ s.pending.target }}">
+              <button class="btn danger" type="submit">Confirm</button>
+              <button class="btn ghost" type="submit" formaction="{{ url_for('cancel') }}" formnovalidate>Cancel</button>
+            </div>
+          </form>
+        </section>
+      {% endif %}
+
+      {% if s.message %}
+        <section class="card ok-card"><header>{{ '✅' if s.message_title == 'Committed' else 'ℹ️' }} {{ s.message_title }}</header><p>{{ s.message }}</p></section>
+      {% endif %}
+
+      {# ---- tabs: Results | SQL Editor | Insights (pure CSS radio tabs) ---- #}
+      <div class="tabs">
+        <input type="radio" name="tab" id="tab-results" class="hidden-input" checked>
+        <label for="tab-results">Results</label>
+        <input type="radio" name="tab" id="tab-sql" class="hidden-input">
+        <label for="tab-sql">SQL Editor</label>
+        <input type="radio" name="tab" id="tab-insights" class="hidden-input">
+        <label for="tab-insights">Insights</label>
+
+        {# ---------- Results: live dataset viewer ---------- #}
+        <div class="tab-panel" id="p-results">
+          {% if s.result and s.result.is_query %}
+            <input type="checkbox" id="opt-dense" class="hidden-input">
+            <input type="checkbox" id="opt-striped" class="hidden-input" checked>
+            <input type="checkbox" id="opt-bordered" class="hidden-input" checked>
+
+            <div class="grid-toolbar">
+              <span class="rowcount"><b>{{ total }}</b> row{{ '' if total == 1 else 's' }}
+                {% if s.result.truncated %}(first {{ total }} shown){% endif %}</span>
+              <span class="spacer"></span>
+              <label for="opt-dense" class="switch">Dense</label>
+              <label for="opt-striped" class="switch">Striped</label>
+              <label for="opt-bordered" class="switch">Bordered</label>
+            </div>
+
+            <div class="grid-wrap">
+              <table class="grid">
+                <thead>
+                  <tr>{% for col in s.result.columns %}<th>{{ col }}</th>{% endfor %}</tr>
+                </thead>
+                <tbody>
+                  {% for row in page_rows %}
+                    <tr>
+                      {% for cell in row %}
+                        {% if cell is none %}<td class="null">NULL</td>
+                        {% elif cell is number %}<td class="num">{{ cell }}</td>
+                        {% else %}<td>{{ cell }}</td>{% endif %}
+                      {% endfor %}
+                    </tr>
+                  {% else %}
+                    <tr><td class="empty-row" colspan="{{ s.result.columns|length }}">No rows returned.</td></tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            {% if pages > 1 %}
+              <nav class="pager">
+                {% if page > 1 %}<a href="{{ url_for('index', page=page - 1) }}">‹ Prev</a>{% else %}<span class="off">‹ Prev</span>{% endif %}
+                <span>Page {{ page }} of {{ pages }}</span>
+                {% if page < pages %}<a href="{{ url_for('index', page=page + 1) }}">Next ›</a>{% else %}<span class="off">Next ›</span>{% endif %}
+              </nav>
+            {% endif %}
+          {% else %}
+            <p class="empty">No data to show.</p>
+          {% endif %}
+        </div>
+
+        {# ---------- SQL Editor: edit + execute (goes through the same validation gate) ---------- #}
+        <div class="tab-panel" id="p-sql">
+          <form method="post" action="{{ url_for('sql_editor') }}">
+            <label for="sql" class="field-label">Edit generated query</label>
+            <textarea id="sql" name="sql" rows="5" class="mono">{{ s.sql }}</textarea>
+            <div class="actions"><button class="btn primary" type="submit">Execute</button></div>
+          </form>
+        </div>
+
+        {# ---------- Insights: how the vector space decided ---------- #}
+        <div class="tab-panel" id="p-insights">
+          {% if s.trace %}
+            <p class="sub">How the cosine-similarity engine read your sentence:</p>
+            <ol class="trace">
+              {% for line in s.trace %}<li><code>{{ line }}</code></li>{% endfor %}
+            </ol>
+          {% else %}
+            <p class="empty">Run a prompt to see the vector evidence behind each SQL slot.</p>
+          {% endif %}
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (function() {
+      // ------------------------------------------------------------- Fast Web Speech Microphone
+      const btnVoice = document.getElementById('btn-voice');
+      const promptTextarea = document.getElementById('prompt');
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+      if (btnVoice && SpeechRec) {
+        const recognition = new SpeechRec();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+
+        let isRecording = false;
+
+        btnVoice.type = 'button';
+        btnVoice.title = 'Click to speak using your microphone';
+
+        btnVoice.addEventListener('click', function(e) {
+          e.preventDefault();
+          if (isRecording) {
+            try { recognition.stop(); } catch(err){}
+            return;
+          }
+
+          try {
+            recognition.start();
+            isRecording = true;
+            btnVoice.classList.add('recording');
+            btnVoice.innerHTML = '🔴 Listening... (speak now)';
+          } catch (err) {
+            console.warn("Speech recognition error, falling back to server voice:", err);
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'action';
+            input.value = 'voice';
+            btnVoice.form.appendChild(input);
+            btnVoice.form.submit();
+          }
+        });
+
+        recognition.onresult = function(event) {
+          isRecording = false;
+          btnVoice.classList.remove('recording');
+          btnVoice.innerHTML = '🎙 Speak (5 s)';
+          if (event.results && event.results[0] && event.results[0][0]) {
+            const transcript = event.results[0][0].transcript.trim();
+            if (transcript && promptTextarea) {
+              promptTextarea.value = transcript;
+              const input = document.createElement('input');
+              input.type = 'hidden';
+              input.name = 'action';
+              input.value = 'run';
+              btnVoice.form.appendChild(input);
+              btnVoice.form.submit();
+            }
+          }
+        };
+
+        recognition.onerror = function(event) {
+          console.warn("Speech recognition error:", event.error);
+          isRecording = false;
+          btnVoice.classList.remove('recording');
+          btnVoice.innerHTML = '🎙 Speak (5 s)';
+          if (event.error === 'not-allowed') {
+            alert('Microphone access was blocked. Please allow microphone access in your browser address bar.');
+          } else if (event.error !== 'no-speech') {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'action';
+            input.value = 'voice';
+            btnVoice.form.appendChild(input);
+            btnVoice.form.submit();
+          }
+        };
+
+        recognition.onend = function() {
+          isRecording = false;
+          btnVoice.classList.remove('recording');
+          btnVoice.innerHTML = '🎙 Speak (5 s)';
+        };
+      }
+    })();
+  </script>
+</body>
+</html>
